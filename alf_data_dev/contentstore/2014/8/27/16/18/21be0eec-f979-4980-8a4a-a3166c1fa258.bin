@@ -1,0 +1,26 @@
+#
+# Alfresco version information
+#
+
+# Version label
+
+version.major=5
+version.minor=0
+version.revision=0
+version.label=
+
+# Edition label
+
+version.edition=Community
+
+# SCM Revision number
+
+version.scmrevision=https://psvn05.alfresco.com/repos/alfresco-open-mirror/alfresco/HEAD-r75118
+
+# Build number
+
+version.build=r75118-b23
+
+# Schema number
+
+version.schema=8001

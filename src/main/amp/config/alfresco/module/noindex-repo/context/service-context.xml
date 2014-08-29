@@ -1,0 +1,55 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE beans PUBLIC '-//SPRING//DTD BEAN//EN' 'http://www.springframework.org/dtd/spring-beans.dtd'>
+<!--
+    Licensed to the Apache Software Foundation (ASF) under one or more
+    contributor license agreements.  See the NOTICE file distributed with
+    this work for additional information regarding copyright ownership.
+    The ASF licenses this file to You under the Apache License, Version 2.0
+    (the "License"); you may not use this file except in compliance with
+    the License.  You may obtain a copy of the License at
+    	
+    http://www.apache.org/licenses/LICENSE-2.0
+    	
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<beans>
+   
+    <!-- Load the noindex content model -->
+    <bean id="gubraModel" parent="dictionaryModelBootstrap" depends-on="dictionaryBootstrap">
+        <property name="models">
+            <list>
+                <value>alfresco/module/noindex-repo/model/noindexModel.xml</value>
+            </list>
+        </property>
+    </bean>
+    
+    <!-- Override SOLRDAOImpl with a version which implements excludeAspects -->
+    <bean id="solrDAO" class="com.rplp.alfresco.MySOLRDAOImpl" init-method="init">
+      <property name="sqlSessionTemplate" ref="solrSqlSessionTemplate"/>
+      <property name="qNameDAO" ref="qnameDAO"/>
+      <property name="nodeService" ref="nodeService" />
+    </bean>
+   
+    <!--
+    <bean id="search.solrTrackingComponent" class="org.alfresco.repo.solr.MySOLRTrackingComponentImpl" init-method="init">
+        <property name="permissionService" ref="permissionService"/>
+        <property name="dictionaryService" ref="dictionaryService"/>
+        <property name="ownableService" ref="ownableService"/>
+        <property name="tenantService" ref="tenantService"/>
+        <property name="nodeDAO" ref="nodeDAO"/>
+        <property name="qnameDAO" ref="qnameDAO"/>
+        <property name="solrDAO" ref="solrDAO" />
+        <property name="dictionaryDAO" ref="dictionaryDAO" />
+        <property name="aclDAO" ref="aclDAO" />
+        <property name="enabled">
+            <value>${search.solrTrackingSupport.enabled}</value>
+        </property>
+    </bean>
+    -->
+    
+    
+</beans>

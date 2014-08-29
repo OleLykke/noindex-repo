@@ -222,58 +222,61 @@ public class MySOLRDAOImpl implements SOLRDAO {
 		if (excludeAspects != null && excludeAspects.size() > 0) {
 			List<Node> filteredResult = new ArrayList<Node>(result.size());
 			for (Node node : result) {
-				NodeRef parentNodeRef = node.getNodeRef();
-				if (nodeService.exists(parentNodeRef)) {
+				NodeRef nodeRef = node.getNodeRef();
+				if (nodeService.exists(nodeRef)) {
 					if (isNodeCached(node)) {
 						/*
-						if (logger.isDebugEnabled()) {
-							logger.debug("It was previously decided to ignore Node with name: "
-									+ nodeService.getProperty(
-											node.getNodeRef(),
-											ContentModel.PROP_NAME));
-						}
-						*/
-						logger.debug("indexer     " + nodeService.getProperty(parentNodeRef, ContentModel.PROP_NAME));
+						 * if (logger.isDebugEnabled()) { logger.debug(
+						 * "It was previously decided to ignore Node with name: "
+						 * + nodeService.getProperty( node.getNodeRef(),
+						 * ContentModel.PROP_NAME)); }
+						 */
+						logger.debug("indexer ikke "
+								+ nodeService.getProperty(nodeRef,
+										ContentModel.PROP_NAME));
 					} else {
-						while (parentNodeRef != null) {
-							/*
-							logger.info("Tjekking... "
-									+ nodeService.getProperty(parentNodeRef,
-											ContentModel.PROP_NAME));
-											*/
-							for (QName excludeAspect : excludeAspects) {
-								if (!nodeService.hasAspect(parentNodeRef,
-										excludeAspect)) {
-									filteredResult.add(node);
-									logger.debug("indexer ikke " + nodeService.getProperty(parentNodeRef, ContentModel.PROP_NAME));
-								} else {
-									addNodeToCache(node);
-									logger.debug("indexer     " + nodeService.getProperty(parentNodeRef, ContentModel.PROP_NAME));
-									/*
-									if (logger.isDebugEnabled()) {
-										logger.debug("Node with name: "
-												+ nodeService.getProperty(
-														node.getNodeRef(),
-														ContentModel.PROP_NAME)
-												+ ", was exclude because it or one of its ancestors had aspect: "
-												+ excludeAspect);
-									}
-									*/
-								}
+						for (QName excludeAspect : excludeAspects) {
+							if (hasThisOrAncestorExcludeAspect(nodeRef,
+									excludeAspect)) {
+								addNodeToCache(node);
+								logger.debug("indexer ikke "
+										+ nodeService.getProperty(
+												nodeRef,
+												ContentModel.PROP_NAME));
+							} else {
+								filteredResult.add(node);
+								logger.debug("indexer     "
+										+ nodeService.getProperty(
+												nodeRef,
+												ContentModel.PROP_NAME));
 							}
-							parentNodeRef = nodeService.getPrimaryParent(
-									parentNodeRef).getParentRef();
 						}
 					}
 				}
 			}
-			result = filteredResult;
+		    result = filteredResult;
 		}
 
-		//return result;
-		List<Node> tom = new ArrayList<Node>();
-		return tom;
+		return result;
+	}	
+	
+	/**
+	 * Checks whether this nodeRef one of its ancestors has an aspect indicating this nodeRef should not be indexed
+	 * @param nodeRef the nodeRef we want to check
+	 * @param excludeAspect the aspects to check for
+	 * @return true if this nodeRef or an ancestor has the aspect otherwise false
+	 */
+	private boolean hasThisOrAncestorExcludeAspect(NodeRef nodeRef, QName excludeAspect) {
+		boolean hasAspect = false;
+		while (nodeRef != null) {
+			if (nodeService.hasAspect(nodeRef, excludeAspect)) {
+				return true;
+			}
+			nodeRef = nodeService.getPrimaryParent(nodeRef).getParentRef();
+		}
+	    return hasAspect;
 	}
+	
 	
 	private boolean isNodeCached(Node node) {
 		boolean found = false;

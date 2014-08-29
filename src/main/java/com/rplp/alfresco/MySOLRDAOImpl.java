@@ -19,8 +19,8 @@ import org.alfresco.repo.solr.NodeParameters;
 import org.alfresco.repo.solr.Transaction;
 import org.alfresco.service.cmr.repository.NodeRef;
 import org.alfresco.service.cmr.repository.NodeService;
-import org.alfresco.service.namespace.NamespaceService;
 import org.alfresco.service.namespace.QName;
+import org.alfresco.util.ExpiringValueCache;
 import org.alfresco.util.Pair;
 import org.alfresco.util.PropertyCheck;
 import org.apache.commons.logging.Log;
@@ -36,9 +36,13 @@ public class MySOLRDAOImpl implements SOLRDAO {
 	private static final String SELECT_TRANSACTIONS = "alfresco.solr.select_Txns";
 	private static final String SELECT_NODES = "alfresco.solr.select_Txn_Nodes";
 	
+	private final static long TIMEOUT_DEFAULT = 1000L*60L;
+	
 	private SqlSessionTemplate template;
     private QNameDAO qnameDAO;
     private NodeService nodeService;
+    
+    private static ExpiringValueCache<HashSet<NodeRef>> nodeCache = new ExpiringValueCache<HashSet<NodeRef>>(TIMEOUT_DEFAULT); 
 
     public final void setSqlSessionTemplate(SqlSessionTemplate sqlSessionTemplate) 
     {
@@ -53,6 +57,16 @@ public class MySOLRDAOImpl implements SOLRDAO {
     public void setNodeService(NodeService nodeService) {
 		this.nodeService = nodeService;
 	}
+    
+    public void setTimeout(String timeout) {
+    	long timeoutInMs = Long.parseLong(timeout);
+    	if (timeoutInMs < TIMEOUT_DEFAULT) {
+    		timeoutInMs = TIMEOUT_DEFAULT;
+    	}
+    	//ExpiringValueCache<Set<Node>> e = new ExpiringValueCache<HashSet<Node>>(timeoutInMs);
+    	//nodeCache = new ExpiringValueCache<HashSet<Node>>(timeoutInMs);
+    	//logger.info("Timeout set to " + timeout);
+       }
 
 	/**
      * Initialize
@@ -61,6 +75,7 @@ public class MySOLRDAOImpl implements SOLRDAO {
     {
         PropertyCheck.mandatory(this, "template", template);
         PropertyCheck.mandatory(this, "qnameDAO", qnameDAO);
+    	//logger.info("*** Custom version of SOLRDAOImpl invoked");
     }
 	
 	@Override
@@ -176,8 +191,6 @@ public class MySOLRDAOImpl implements SOLRDAO {
 	@SuppressWarnings("unchecked")
 	public List<Node> getNodes(NodeParameters nodeParameters)
 	{
-    	logger.info("*** M y   v e r s i o n   o f   M y S O L R D A O I m p l");
-    	
     	NodeParametersEntity params = new NodeParametersEntity(nodeParameters, qnameDAO);
     	
     	List<Node> result;
@@ -202,37 +215,89 @@ public class MySOLRDAOImpl implements SOLRDAO {
 	     *    hvis ja
 	     *      fjern noderef fra resultatet
 	     *    
-	     * TODO: cache de node, som skal eksluderes... det er de samme igen og igen ... brug expiringCache
+	     * TODO: cache de nodes, som skal eksluderes... det er de samme igen og igen ... brug expiringCache
 	     */
 	    Set<QName> excludeAspects = params.getExcludeAspects();
 	    
 		if (excludeAspects != null && excludeAspects.size() > 0) {
 			List<Node> filteredResult = new ArrayList<Node>(result.size());
-			logger.debug("Length of exclude aspects " + excludeAspects.size());
 			for (Node node : result) {
 				NodeRef parentNodeRef = node.getNodeRef();
-				while (parentNodeRef != null) {
-					if (nodeService.exists(parentNodeRef)) {
-						for (QName excludeAspect : excludeAspects) {
-							if (!nodeService.hasAspect(parentNodeRef,
-									excludeAspect)) {
-								filteredResult.add(node);
-							} else {
-								logger.debug("Node with name "
-										+ nodeService.getProperty(
-												node.getNodeRef(),
-												ContentModel.PROP_NAME)
-										+ " was exclude because it or one of its ancestors had aspect: " + excludeAspect);
-							}
+				if (nodeService.exists(parentNodeRef)) {
+					if (isNodeCached(node)) {
+						/*
+						if (logger.isDebugEnabled()) {
+							logger.debug("It was previously decided to ignore Node with name: "
+									+ nodeService.getProperty(
+											node.getNodeRef(),
+											ContentModel.PROP_NAME));
 						}
-						parentNodeRef = nodeService.getPrimaryParent(parentNodeRef).getParentRef();
+						*/
+						logger.debug("indexer     " + nodeService.getProperty(parentNodeRef, ContentModel.PROP_NAME));
+					} else {
+						while (parentNodeRef != null) {
+							/*
+							logger.info("Tjekking... "
+									+ nodeService.getProperty(parentNodeRef,
+											ContentModel.PROP_NAME));
+											*/
+							for (QName excludeAspect : excludeAspects) {
+								if (!nodeService.hasAspect(parentNodeRef,
+										excludeAspect)) {
+									filteredResult.add(node);
+									logger.debug("indexer ikke " + nodeService.getProperty(parentNodeRef, ContentModel.PROP_NAME));
+								} else {
+									addNodeToCache(node);
+									logger.debug("indexer     " + nodeService.getProperty(parentNodeRef, ContentModel.PROP_NAME));
+									/*
+									if (logger.isDebugEnabled()) {
+										logger.debug("Node with name: "
+												+ nodeService.getProperty(
+														node.getNodeRef(),
+														ContentModel.PROP_NAME)
+												+ ", was exclude because it or one of its ancestors had aspect: "
+												+ excludeAspect);
+									}
+									*/
+								}
+							}
+							parentNodeRef = nodeService.getPrimaryParent(
+									parentNodeRef).getParentRef();
+						}
 					}
 				}
 			}
 			result = filteredResult;
-		}	    
-	    
-	    return result;
+		}
+
+		//return result;
+		List<Node> tom = new ArrayList<Node>();
+		return tom;
+	}
+	
+	private boolean isNodeCached(Node node) {
+		boolean found = false;
+		if (nodeCache == null) {
+			logger.error("excludeAspectsCache is null");
+			found = false;
+		} else {
+			HashSet<NodeRef> set = nodeCache.get();
+			if (set == null) {
+				found = false;
+			} else {
+				found = set.contains(node.getNodeRef());
+			}
+		}
+		return found;
+	}
+
+	private void addNodeToCache(Node node) {
+		HashSet<NodeRef> cachedNodes = nodeCache.get();
+		if (cachedNodes == null) {
+			cachedNodes = new HashSet<NodeRef>();
+		}
+		cachedNodes.add(node.getNodeRef());
+		nodeCache.put(cachedNodes);
 	}
 
 }

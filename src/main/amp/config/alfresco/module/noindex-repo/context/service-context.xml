@@ -32,6 +32,7 @@
       <property name="sqlSessionTemplate" ref="solrSqlSessionTemplate"/>
       <property name="qNameDAO" ref="qnameDAO"/>
       <property name="nodeService" ref="nodeService" />
+      <property name="timeout" value="3600000" /> <!-- One hour 1000 x 60 x 60 -->
     </bean>
    
     <!--

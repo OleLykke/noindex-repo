@@ -18,17 +18,17 @@
  */
 package org.alfresco.repo.solr;
 
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.alfresco.repo.version.NodeServiceImpl;
 import org.alfresco.service.namespace.QName;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import com.rplp.alfresco.NoindexModel;
+
+
 
 /**
  * Stores node query parameters for use in SOLR DAO queries
@@ -58,11 +58,10 @@ public class NodeParameters
     private Set<QName> includeAspects;
     private Set<QName> excludeAspects;
     
-    //Er det nødvendig at fjerne duplikat i alfresco-repository-5.0.a.jar
     public NodeParameters() {
     	excludeAspects = new HashSet<QName>();
-        excludeAspects.add(NoindexModel.ASPECT_NOINDEX);
-        logger.info("*** M y   v e r s i o n   o f   N o d e P a r a m e t e r s");
+    	excludeAspects.add(NoindexModel.ASPECT_NOINDEX);
+        //logger.info("*** Custom version of NodeParameters invoked");
 	}
 
 	public int getMaxResults()

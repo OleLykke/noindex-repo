@@ -236,6 +236,7 @@ public class MySOLRDAOImpl implements SOLRDAO {
 										ContentModel.PROP_NAME));
 					} else {
 						for (QName excludeAspect : excludeAspects) {
+							logger.debug("aspect " + excludeAspect);
 							if (hasThisOrAncestorExcludeAspect(nodeRef,
 									excludeAspect)) {
 								addNodeToCache(node);
@@ -269,6 +270,10 @@ public class MySOLRDAOImpl implements SOLRDAO {
 	private boolean hasThisOrAncestorExcludeAspect(NodeRef nodeRef, QName excludeAspect) {
 		boolean hasAspect = false;
 		while (nodeRef != null) {
+			if (!nodeService.exists(nodeRef)) {
+				return false;
+			}
+			
 			if (nodeService.hasAspect(nodeRef, excludeAspect)) {
 				return true;
 			}
